@@ -10,9 +10,7 @@ namespace InstituteOfFineArts.Data
             : base(options)
         {
         }
-        public DbSet<InstituteOfFineArts.Models.Student> Student { get; set; } = default!;
-        public DbSet<InstituteOfFineArts.Models.Staff> Staff { get; set; } = default!;
-        public DbSet<InstituteOfFineArts.Models.Painting> Painting { get; set; } = default!;
-        public DbSet<InstituteOfFineArts.Models.Manager> Manager { get; set; } = default!;
+        public DbSet<Painting> Paintings { get; set; }
+
     }
 }

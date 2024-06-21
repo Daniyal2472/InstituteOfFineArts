@@ -1,0 +1,45 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model IEnumerable<InstituteOfFineArts.Data.ApplicationUser>
+@if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Staff"))
+{
+    <h2>Students</h2>
+    <p>
+        <a asp-area="Identity" asp-page="/Account/Register">Add student</a>
+    </p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Username</th>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int count = 0;
+                foreach (var user in Model)
+                {
+                    count++;
+                    <tr>
+                        <th scope="row">@count</th>
+                        <td>@user.UserName</td>
+                        <td>@user.Name</td>
+                        <td>@user.Email</td>
+                        @if (User.IsInRole("Admin")){
+                        <td><a asp-action="Edit" asp-route-id="@user.Id">Edit</a></td>
+                        <td><a asp-action="Delete" asp-route-id="@user.Id">Delete</a></td>}
+                        <td><a asp-action="Details" asp-route-id="@user.Id">Details</a></td>
+                        
+                    </tr>
+                
+                }
+            }
+        </tbody>
+    </table>
+}

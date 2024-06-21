@@ -20,6 +20,7 @@ namespace InstituteOfFineArts.Data
 
             var user = new ApplicationUser
             {
+                Name = "Admin",
                 UserName = "admin@gmail.com",
                 Email = "admin@gmail.com",
                 EmailConfirmed = true,

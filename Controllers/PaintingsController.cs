@@ -1,7 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -10,23 +12,25 @@ using InstituteOfFineArts.Models;
 
 namespace InstituteOfFineArts.Controllers
 {
-    public class PaintingController : Controller
+    public class PaintingsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public PaintingController(ApplicationDbContext context)
+        public PaintingsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        // GET: Painting
+        // GET: Paintings
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Painting.Include(p => p.Student);
+            var applicationDbContext = _context.Paintings.Include(p => p.Student);
             return View(await applicationDbContext.ToListAsync());
         }
 
-        // GET: Painting/Details/5
+        // GET: Paintings/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -34,7 +38,7 @@ namespace InstituteOfFineArts.Controllers
                 return NotFound();
             }
 
-            var painting = await _context.Painting
+            var painting = await _context.Paintings
                 .Include(p => p.Student)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (painting == null)
@@ -45,31 +49,38 @@ namespace InstituteOfFineArts.Controllers
             return View(painting);
         }
 
-        // GET: Painting/Create
+        // GET: Paintings/Create
         public IActionResult Create()
         {
-            ViewData["StudentId"] = new SelectList(_context.Student, "Id", "Email");
+            ViewData["StudentId"] = new SelectList(_context.Users, "Id", "UserName");
             return View();
         }
 
-        // POST: Painting/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,Description,ImageUrl,StudentId")] Painting painting)
+        public async Task<IActionResult> Create([Bind("Title,Artist,CreatedDate,Medium,Description,StudentId,PicturePath")] Painting painting, IFormFile PictureFile)
         {
             if (ModelState.IsValid)
             {
+                if (PictureFile != null && PictureFile.Length > 0)
+                {
+                    var filePath = Path.Combine("wwwroot/images", PictureFile.FileName);
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await PictureFile.CopyToAsync(stream);
+                    }
+                    painting.PicturePath = PictureFile.FileName;
+                }
+
                 _context.Add(painting);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["StudentId"] = new SelectList(_context.Student, "Id", "Email", painting.StudentId);
             return View(painting);
         }
 
-        // GET: Painting/Edit/5
+
+        // GET: Paintings/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -77,21 +88,19 @@ namespace InstituteOfFineArts.Controllers
                 return NotFound();
             }
 
-            var painting = await _context.Painting.FindAsync(id);
+            var painting = await _context.Paintings.FindAsync(id);
             if (painting == null)
             {
                 return NotFound();
             }
-            ViewData["StudentId"] = new SelectList(_context.Student, "Id", "Email", painting.StudentId);
+            ViewData["StudentId"] = new SelectList(_context.Users, "Id", "UserName", painting.StudentId);
             return View(painting);
         }
 
-        // POST: Painting/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // POST: Paintings/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,ImageUrl,StudentId")] Painting painting)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Artist,CreatedDate,Medium,Description,StudentId")] Painting painting, IFormFile pictureFile)
         {
             if (id != painting.Id)
             {
@@ -102,6 +111,17 @@ namespace InstituteOfFineArts.Controllers
             {
                 try
                 {
+                    if (pictureFile != null)
+                    {
+                        var fileName = $"{Guid.NewGuid()}_{pictureFile.FileName}";
+                        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images", fileName);
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await pictureFile.CopyToAsync(stream);
+                        }
+                        painting.PicturePath = $"/images/{fileName}";
+                    }
+
                     _context.Update(painting);
                     await _context.SaveChangesAsync();
                 }
@@ -118,11 +138,11 @@ namespace InstituteOfFineArts.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["StudentId"] = new SelectList(_context.Student, "Id", "Email", painting.StudentId);
+            ViewData["StudentId"] = new SelectList(_context.Users, "Id", "UserName", painting.StudentId);
             return View(painting);
         }
 
-        // GET: Painting/Delete/5
+        // GET: Paintings/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -130,7 +150,7 @@ namespace InstituteOfFineArts.Controllers
                 return NotFound();
             }
 
-            var painting = await _context.Painting
+            var painting = await _context.Paintings
                 .Include(p => p.Student)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (painting == null)
@@ -141,15 +161,15 @@ namespace InstituteOfFineArts.Controllers
             return View(painting);
         }
 
-        // POST: Painting/Delete/5
+        // POST: Paintings/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var painting = await _context.Painting.FindAsync(id);
+            var painting = await _context.Paintings.FindAsync(id);
             if (painting != null)
             {
-                _context.Painting.Remove(painting);
+                _context.Paintings.Remove(painting);
             }
 
             await _context.SaveChangesAsync();
@@ -158,7 +178,7 @@ namespace InstituteOfFineArts.Controllers
 
         private bool PaintingExists(int id)
         {
-            return _context.Painting.Any(e => e.Id == id);
+            return _context.Paintings.Any(e => e.Id == id);
         }
     }
 }
